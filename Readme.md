@@ -44,6 +44,7 @@ For example:
     - make predictions using data of generator
     - returns actual and predicted values
   The results of estimate() can be used to estimate a quality of a trained algorithm.
+
 4. When the previous cycle has been finished, it is possible to make prediction of a future value using the last batch with length 1
 5. Having a new input value, it can be added to a generator, and a generator will be ready to create a new batch of data for a model.
 6. Another possibility is to add a predicted data to a generator, and predict new value. This method can be useful if more than one
