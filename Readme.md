@@ -76,8 +76,9 @@ without using a GPU.<br/>
 Another set is used for a computer with GPU. This algoritm was trained on a Google computer with GPU.
 
 
-__TODO__ includes:
+__TODO__:
 
 - implement the predict() method of Model
 - move the Model class outside of the notebook
+- implement an algorithm for retraining using when a received value is out of calculated confidence interval.
 
