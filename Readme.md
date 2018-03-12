@@ -2,14 +2,14 @@
 ### How to define a confidence interval for prediction in LSTM network for time series.
 
 This is the desciption of software used in the [How to define a confidence interval based on training set for an LSTM network for time-series.
-](https://rtaubes.pythonanywhere.com/lstm-1)
+](https://rtaubes.pythonanywhere.com/lstm-1/)
 
 One of the possible types of appications for Long-short term neural networks is forecasting.
-There are a lot of articles and books how to implement and use LSTM for prediction of count
+There are a lot of articles and books describing how to implement and use LSTM for prediction of count
 of passengeres in airlines, trends in a stock market.
 Having forecasted value, it is important to answer question:<br/>
-What is a possible range for predicted value. I.e. if predicted value is X, actually it
-means that actual value expected in the range [X-x0, X+x1], where<br/>
+What is a possible range for predicted value? In other words, if predicted value is X, actually it
+means that actual value expected to be in the range [X-x0, X+x1], where<br/>
 __X__ - predicted value,<br/>
 __x0__ and __x1__ - lower and upper bounds of prediction<br/>
 
@@ -21,17 +21,24 @@ some simple sequences like Sin for debugging.
 The main algorithm of using the data source is:
 
 - create a data generator
-  import ...
-  gen = BatchGenerator(...)
+<pre>
+  import data_generator
+  gen = data_generator.BatchGenerator(...)
+</pre>
 - do training of a model use the code
+<pre>
   for idx, x_batches, y_batches in gen:
     do something
+</pre>
 - if it is required, it is possible to reset a data generator to begin using the method reset().
 For example:
+<pre>
   gen.reset()
   for idx, x_batches, y_batches is gen:
     do something
+</pre>
   This method is used by the evaluate() method:
+
     - temporary set a batch size to 1
     - reset generator using the reset()
     - make predictions using data of generator
