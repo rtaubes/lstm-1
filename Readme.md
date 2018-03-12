@@ -37,7 +37,7 @@ For example:
   for idx, x_batches, y_batches is gen:
     do something
 </pre>
-  This method is used by the evaluate():
+  This method is used by the evaluate() method of Model:
 
     - temporary set a batch size to 1
     - reset generator using the reset()
