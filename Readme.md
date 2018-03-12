@@ -67,7 +67,7 @@ This allows to make an interactive training:
 Another possibility is to call the method from_latests_point() when a new model has been created.
 In this case, rather then starting training from scratch, model will start from the latest point.
 
-The third case allows to start training or evaluation from some saved point. Use the method from_custom_point() where the argument
+The third method allows to start training or evaluation from some saved point. Use the method from_custom_point() where the argument
 is the path to a checkpoint. The path should not use extension. For example, if a checkpoint includes 3 files 'ckpt-1.data', 'cpkt-1.index', 'cpkt-1.data-...',
 use 'ckpt-1' as the path to the checkpoint.
 
