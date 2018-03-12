@@ -20,39 +20,39 @@ The data generator in the 'src' folder can generate not only batches from CSV fi
 some simple sequences like Sin for debugging.
 The main algorithm of using the data source is:
 
-- create a data generator
+1. create a data generator
 <pre>
   import data_generator
   gen = data_generator.BatchGenerator(...)
 </pre>
-- do training of a model use the code
+2. do training of a model use the code
 <pre>
   for idx, x_batches, y_batches in gen:
     do something
 </pre>
-- if it is required, it is possible to reset a data generator to begin using the method reset().
+3. if it is required, it is possible to reset a data generator to begin using the method reset().
 For example:
 <pre>
   gen.reset()
   for idx, x_batches, y_batches is gen:
     do something
 </pre>
-  This method is used by the evaluate() method:
+  This method is used by the evaluate():
 
     - temporary set a batch size to 1
     - reset generator using the reset()
     - make predictions using data of generator
     - returns actual and predicted values
   The results of estimate() can be used to estimate a quality of a trained algorithm.
-- When the previous cycle has been finished, it is possible to make prediction of a future value using the last batch with length 1
-- Having a new input value, it can be added to a generator, and a generator will be ready to create a new batch of data for a model.
-- Another possibility is to add a predicted data to a generator, and predict new value. This method can be useful if more than one
+4. When the previous cycle has been finished, it is possible to make prediction of a future value using the last batch with length 1
+5. Having a new input value, it can be added to a generator, and a generator will be ready to create a new batch of data for a model.
+6. Another possibility is to add a predicted data to a generator, and predict new value. This method can be useful if more than one
 value should be predicted.
 
 I want to notice that for currently prediction is used only for estimation of a confidence interval. Forecasting of future values
 is out of the current topic and will be implemented later.
 
-The LSTM model saves checkpoints each 10 steps(this value can be changed), and at the end of traing.
+The LSTM model saves checkpoints each 10 steps(this value can be changed), and at the end of each traing.
 This allows to make an interactive training:
 
 - Define in settings how many epochs is used for training
@@ -61,24 +61,22 @@ This allows to make an interactive training:
 - call the train() method of the model.
 - estimate quality of the model
 - if model should be trained later, call the train() method
+- repeat the two last steps as much as you need
 
-Another possibility is to call the from_latests_point() when a new model has been created. In this case, rather than starting
-training from scratch, model will start from the latest point.
+Another possibility is to call the method from_latests_point() when a new model has been created.
+In this case, rather then starting training from scratch, model will start from the latest point.
 
 The third case allows to start training or evaluation from some saved point. Use the method from_custom_point() where the argument
 is the path to a checkpoint. The path should not use extension. For example, if a checkpoint includes 3 files 'ckpt-1.data', 'cpkt-1.index', 'cpkt-1.data-...',
 use 'ckpt-1' as the path to the checkpoint.
 
+There are two set of settings in the notebook. One is used for debugging an algorithm and settings on a laptop
+without using a GPU.<br/>
+Another set is used for a computer with GPU. This algoritm was trained on a Google computer with GPU.
 
 
+__TODO__ includes:
 
-
-
-
-
-
-[How to define a confidence interval based on training set for an LSTM network for time-series.](https://rtaubes.pythonanywhere.com)
-
-
-
+- implement the predict() method of Model
+- move the Model class outside of the notebook
 
