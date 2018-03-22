@@ -1,0 +1,10 @@
+# Editor
+*~
+*.swo
+*.swp
+*.swn
+
+# Executable
+*.pyc
+
+

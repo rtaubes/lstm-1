@@ -1,5 +1,6 @@
 """
-    Generators that works as iterators and can be used in a 'while' loop
+    Generators that works as iterators and can be used in a 'while' loop.
+    Restriction: x_features must be 1.
 """
 
 import datetime
@@ -16,7 +17,7 @@ def _sin_gen(ampl, period_steps, offset, size):
     """ Generate a noisy sin sequence """
     x_step = np.pi * 2 / period_steps
     xarg = [ i % period_steps * x_step for i in range(size)]
-    x_sin = np.sin(np.array(xarg))
+    x_sin = ampl * np.sin(np.array(xarg)) + offset
     return x_sin
 
 
@@ -62,35 +63,31 @@ class BatchGenerator:
     """ Generate batches for using in a 'while' cycle.
         Using 'align_size'=True, data size will be aligned to the whole number of batches by
         removing elements from beginning. This value may be reassigned to '1' or to a value
-        which didn't change the data size. Otherwise a ValueError will be raised.
-        Number of output features is always 1 and this is an 'y'.
+        which don't change the data size. Otherwise a ValueError will be raised.
         Assume that x is a sequence 'x0 x1 x2 x3 x4 x5 x6'
-        The example of batches X and Y with batch_size=4, x_steps=3, y_steps=3
+        The example of batches X and Y with batch_size=4, x_steps=3, x_features=1, y_features=2
         X:               Y:
-        [x0, x1, x2] [x1, x2, x3]
-        [x1, x2, x3] [x2, x3, x4]
-        [x2, x3, x4] [x3, x4, x5]
-        [x3, x4, x5] [x4, x5, x6]
-        number of features is 1.
-        An output batch shape is (4, 3, 1)
-        The example of batches X and Y with batch_size=3, x_steps=3, y_steps=1
-        X:               Y:
+        [x0, x1, x2] [x3, x4]
+        [x1, x2, x3] [x4, x5]
+        [x2, x3, x4] [x5, x6]
+        An output batch shapes is (, 3, 1) for X, and (3, 2) for Y.
+
+        The example of batches X and Y with batch_size=3, x_steps=3, y_features=1,
+        X:            Y:
         [x0, x1, x2] [x3]
         [x1, x2, x3] [x4]
         [x2, x3, x4] [x5]
         number of features is 1.
-        An output batch shape is (4, 3, 1)
-        Note that number of columns for Y depends on a neural network structure and usually
-        either x_steps or 1.
+        An output batch shape is (3, 3, 1) for X, and (3, 1) for Y.
     """
-    def __init__(self, data=None, dates=None, batch_size=1, x_steps=1, y_steps=1, noise_std=0,
+    def __init__(self, data=None, dates=None, batch_size=1, x_steps=1, y_features=1, noise_std=0,
                  align_size=True):
         """
             :param data: data as numpy array
             :param dates: np.array of dates for values
             :param batch_size: size of batch.
             :param x_steps: X steps in a batch row. The second dimension for x_batch
-            :param y_steps: Y steps in a batch row. The second dimension for y_batch
+            :param y_features: Y steps in a batch row. The second dimension for y_batch
             :param noise_std: std of added noise.
             :param align_size: align size to the whole number of batches
         """
@@ -113,7 +110,7 @@ class BatchGenerator:
         self._idx0 = 0
         self._offset = 0
         self._x_steps = x_steps
-        self._y_steps = y_steps
+        self._y_features = y_features
         self._batch_size = batch_size
         if align_size:
             new_size = self._align_data(batch_size)
@@ -140,8 +137,8 @@ class BatchGenerator:
         self._idx0 = max(self._idx0-1, 0)
 
     def _align_data(self, batch_size):
-        ssz = self._size - self._x_steps
-        return ssz - ssz % batch_size + self._x_steps
+        ssz = batch_size - 1 + self._x_steps + self._y_features
+        return self._size - self._size % batch_size
 
     def reset(self):
         """ Reset values """
@@ -150,7 +147,7 @@ class BatchGenerator:
     @property
     def batch_size(self):
       return self._batch_size
-    
+
     @batch_size.setter
     def batch_size(self, batch_size):
         if self._align_size:
@@ -165,20 +162,40 @@ class BatchGenerator:
         return self
 
     def __next__(self):
-        y_bg = self._idx0 + self._x_steps + 1 - self._y_steps
-        last_idx = self._idx0 + self._x_steps + self._batch_size - 1
+        """ The size of batches is self._x_steps + self._y_features + self._batch_size - 1 """
+        y_bg = self._idx0 + self._x_steps + 1
+        last_idx = self._idx0 + self._x_steps + self._batch_size + self._y_features - 2
         # The last batch must have full length.
+        # print("idx:", self._idx0, last_idx, self._size)
         if last_idx >= self._size:
             raise StopIteration()
         batches = []
         for cnt in range(self._batch_size):
-            row = self._data[self._idx0 : self._idx0 + self._x_steps + 1]
+            row = self._data[self._idx0 : self._idx0 + self._x_steps + self._y_features]
             self._idx0 += 1
             batches.append(row)
+        # print("gen:", batches)
         np_batch = np.array(batches)
-        x_batch = np_batch[:, :-1].reshape(-1, self._x_steps, 1)
-        y_batch = np_batch[:, -self._y_steps:].reshape(-1, self._y_steps, 1)
+        x_batch = np_batch[:, :self._x_steps].reshape(-1, self._x_steps, 1)
+        y_batch = np_batch[:, self._x_steps:].reshape(-1, self._y_features)
+        # print("y_batch:", y_batch.shape)
         return y_bg, x_batch, y_batch
+
+    def get_last_x_batches(self, batch_size=1):
+        """ Get the last X batch from data. Useful to get X batch for prediction.
+            :param batch_size: a size of returned batch. This is a temporary parameter valid only
+                for this function
+            :return: a batch of requested size or exception if not enough data for the batch.
+        """
+        batches = []
+        batch_idx = self._size - self._x_steps - batch_size - self._y_features + 1
+        if batch_idx < 0:
+            raise ValueError("Could not get the last X batch of size {}, x_steps: {}."
+                             "Not enough data: {}".format(batch_size, self._x_steps, self._size))
+        for idx in range(batch_size):
+            row = self._data[batch_idx+idx: batch_idx + idx + self._x_steps]
+            batches.append(row)
+        return np.array(batches).reshape(-1, self._x_steps, 1)
 
     def scale(self, range=None):
         """ scale data.
@@ -202,8 +219,10 @@ class BatchGenerator:
             return data
         if isinstance(data, list):
             data2 = np.array(data).reshape(-1, 1)
-        else:
+        elif isinstance(data, np.ndarray):
             data2 = data
+        else:
+            raise ValueError("Expected np.array of list. Got {}".format(type(data)))
         unscaled = self._scaler.inverse_transform(data2)
         if isinstance(data, list):
             return unscaled.flatten().tolist()
@@ -230,41 +249,40 @@ class BatchGenerator:
 
 class SinBatches(BatchGenerator):
     def __init__(self, sin_ampl=0.5, period_steps=10, offset=0.45,
-                 size=100, batch_size=10, x_steps=1, y_steps=1, align_size=True, noise_std=0):
+                 size=100, batch_size=10, x_steps=1, y_features=1, align_size=True, noise_std=0):
         data = _sin_gen(sin_ampl, period_steps, offset, size)
         super(SinBatches, self).__init__(data=data, batch_size=batch_size, x_steps=x_steps,
-                                         y_steps=y_steps, noise_std=noise_std,
+                                         y_features=y_features, noise_std=noise_std,
                                          align_size=align_size)
 
-
 class LinBatches(BatchGenerator):
-    def __init__(self, step_ampl=1, size=100, batch_size=10, x_steps=1, y_steps=1, align_size=True,
+    def __init__(self, step_ampl=1, size=100, batch_size=10, x_steps=1, y_features=1, align_size=True,
                  noise_std=0.0):
         data = _lin_gen(step_ampl, size)
-        super().__init__(data=data, batch_size=batch_size, x_steps=x_steps, y_steps=y_steps,
+        super().__init__(data=data, batch_size=batch_size, x_steps=x_steps, y_features=y_features,
                          noise_std=noise_std, align_size=align_size)
 
 
 class PulseBatches(BatchGenerator):
-    def __init__(self, pulse_width=1, period=30, batch_size=10, x_steps=1, y_steps=1, size=100,
+    def __init__(self, pulse_width=1, period=30, batch_size=10, x_steps=1, y_features=1, size=100,
                  align_size=True, noise_std=0):
         data = _pulse_gen(pulse_width, period, size)
-        super().__init__(data=data, batch_size=batch_size, x_steps=x_steps, y_steps=y_steps,
+        super().__init__(data=data, batch_size=batch_size, x_steps=x_steps, y_features=y_features,
                          noise_std=noise_std, align_size=align_size)
 
 class CSVBatches(BatchGenerator):
-    def __init__(self, fname, date_col, val_col, batch_size=10, x_steps=1, y_steps=1,
+    def __init__(self, fname, date_col, val_col, batch_size=10, x_steps=1, y_features=1,
                  align_size=True, noise_std=0):
         data, dates = csv_reader(fname, date_col, val_col)
-        super().__init__(data=data, batch_size=batch_size, x_steps=x_steps, y_steps=y_steps,
+        super().__init__(data=data, batch_size=batch_size, x_steps=x_steps, y_features=y_features,
                          noise_std=noise_std, align_size=align_size)
 
 class PandasBatches(BatchGenerator):
-    def __init__(self, data_frame, val_col, date_col, batch_size=10, x_steps=1, y_steps=1,
+    def __init__(self, data_frame, val_col, date_col, batch_size=10, x_steps=1, y_features=1,
                  align_size=True, noise_std=0):
         data, dates = _pandas_gen(data_frame, val_col=val_col, date_col=date_col)
         super().__init__(data=data, dates=dates, batch_size=batch_size,
-                         x_steps=x_steps, y_steps=y_steps, noise_std=noise_std,
+                         x_steps=x_steps, y_features=y_features, noise_std=noise_std,
                          align_size=align_size)
 
 if __name__ == '__main__':
@@ -273,7 +291,7 @@ if __name__ == '__main__':
     TIME_STEPS = 4
     DATA_SIZE = 40
     pb = LinBatches(step_ampl=0.01, size=DATA_SIZE, batch_size=BATCH_SIZE,
-                    x_steps=TIME_STEPS, y_steps=1, align_size=True, noise_std=0.0)
+                    x_steps=TIME_STEPS, y_features=1, align_size=True, noise_std=0.0)
     # pb = PulseBatches(pulse_width=1, period=5, batch_size=9, time_steps=64, size=1000)
     print("Data:", pb.data)
     for idx, xb, yb in pb:
