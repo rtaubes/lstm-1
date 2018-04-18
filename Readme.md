@@ -1,7 +1,7 @@
 
-### How to define a confidence interval for prediction in LSTM network for time series.
+### How to define a prediction interval for prediction in LSTM network for time series.
 
-This is the desciption of software used in the [How to define a confidence interval based on training set for an LSTM network for time-series.
+This is the desciption of software used in the [How to define a predictioni interval based on training set for an LSTM network for time-series.
 ](https://rtaubes.pythonanywhere.com/lstm-1/)
 
 One of the possible types of appications for Long-short term neural networks is forecasting.
@@ -50,7 +50,7 @@ For example:
 6. Another possibility is to add a predicted data to a generator, and predict new value. This method can be useful if more than one
 value should be predicted.
 
-I want to notice that for currently prediction is used only for estimation of a confidence interval. Forecasting of future values
+I want to notice that for currently prediction is used only for estimation of a prediction interval. Forecasting of future values
 is out of the current topic and will be implemented later.
 
 The LSTM model saves checkpoints each 10 steps(this value can be changed), and at the end of each traing.
