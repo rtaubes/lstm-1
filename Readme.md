@@ -1,5 +1,5 @@
 
-### How to define a prediction interval for prediction in LSTM network for time series.
+### How to define a prediction interval for LSTM network for time series.
 
 This is the desciption of software used in the [How to define a predictioni interval based on training set for an LSTM network for time-series.
 ](https://rtaubes.pythonanywhere.com/lstm-1/)
